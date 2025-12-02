@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Health Check — BMI & Advice</title>
+  <style>
+    :root{
+      --bg:#f6f8fb;
+      --card:#ffffff;
+      --accent:#0b72ff;
+      --muted:#6b7280;
+      --success:#0ea5a4;
+      --danger:#ef4444;
+    }
+    *{box-sizing:border-box;font-family:Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;}
+    body{margin:0;background:linear-gradient(180deg,#eef6ff 0%,var(--bg) 100%);padding:30px;display:flex;align-items:center;justify-content:center;min-height:100vh;color:#0f172a;}
+    .container{width:100%;max-width:900px;background:var(--card);border-radius:14px;box-shadow:0 10px 30px rgba(15,23,42,0.08);padding:24px;display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+    header{grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;}
+    header h1{margin:0;font-size:20px;}
+    header p{margin:0;color:var(--muted);font-size:13px;}
+    form{display:flex;flex-direction:column;gap:12px;}
+    label{font-size:13px;color:var(--muted);}
+    .row{display:flex;gap:12px;}
+    input[type="number"], select{
+      width:100%;padding:10px 12px;border-radius:8px;border:1px solid #e6e9ef;font-size:14px;
+    }
+    .btn{
+      background:var(--accent);color:white;padding:10px 14px;border-radius:10px;border:none;font-weight:600;cursor:pointer;
+      box-shadow:0 6px 18px rgba(11,114,255,0.18);
+    }
+    .btn:active{transform:translateY(1px)}
+    .result{
+      background:linear-gradient(180deg, #fff 0%, #fbfdff 100%);
+      padding:18px;border-radius:12px;border:1px solid #eef4ff;height:100%;display:flex;flex-direction:column;gap:12px;
+    }
+    .bmi-value{font-size:34px;font-weight:700}
+    .category{font-size:18px;font-weight:700;padding:8px 12px;border-radius:999px;display:inline-block}
+    .under{background: #fff7ed;color:#b45309;border:1px solid #ffedd5}
+    .fit{background:#ecfdf5;color:#065f46;border:1px solid #bbf7d0}
+    .over{background:#fff1f2;color:#7f1d1d;border:1px solid #fecaca}
+    .advice{font-size:14px;color:var(--muted);line-height:1.5;}
+    .dos, .donts{display:flex;flex-direction:column;gap:6px}
+    .badge{display:inline-block;padding:6px 10px;border-radius:8px;background:#f1f5f9;color:#0f172a;font-weight:600;font-size:13px}
+    .small{font-size:13px;color:var(--muted)}
+    footer{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;margin-top:8px;}
+    pre{white-space:pre-wrap;font-family:inherit;background:#0b1220;color:#dbeafe;padding:8px;border-radius:8px;font-size:13px}
+    @media (max-width:800px){ .container{grid-template-columns:1fr;} }
+  </style>
+</head>
+<body>
+  <div class="container" role="main" aria-labelledby="title">
+    <header>
+      <div>
+        <h1 id="title">Simple Health Check — BMI & Advice</h1>
+        <p class="small">Enter height (cm), weight (kg) and age → get BMI, category and practical dos/don’ts.</p>
+      </div>
+      <div class="badge" id="last-update">v1.0</div>
+    </header>
+
+    <!-- Form -->
+    <form id="health-form" onsubmit="return false;" aria-describedby="form-desc">
+      <p id="form-desc" class="small">All fields required. Height in cm, weight in kg, age in years.</p>
+
+      <div>
+        <label for="age">Age (years)</label>
+        <input id="age" type="number" min="1" max="120" placeholder="e.g. 21" required />
+      </div>
+
+      <div>
+        <label for="height">Height (cm)</label>
+        <input id="height" type="number" min="50" max="250" placeholder="e.g. 170" required />
+      </div>
+
+      <div>
+        <label for="weight">Weight (kg)</label>
+        <input id="weight" type="number" min="10" max="500" step="0.1" placeholder="e.g. 65.5" required />
+      </div>
+
+      <div style="display:flex;gap:10px;align-items:center;margin-top:6px;">
+        <button class="btn" id="check-btn" type="button">Check</button>
+        <button class="btn" id="clear-btn" type="button" style="background:#e6eefc;color:var(--accent);box-shadow:none">Clear</button>
+        <div style="margin-left:auto;color:var(--muted);font-size:13px">BMI measured by WHO formula</div>
+      </div>
+    </form>
+
+    <!-- Result -->
+    <section class="result" aria-live="polite" id="result-card">
+      <div>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div>
+            <div class="small">Your BMI</div>
+            <div class="bmi-value" id="bmi-value">—</div>
+            <div class="small" id="bmi-note">Enter values and press Check</div>
+          </div>
+          <div style="margin-left:auto;text-align:right;">
+            <div class="small">Category</div>
+            <div id="category-pill" class="category" style="visibility:hidden">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="small">Interpretation</div>
+        <div id="interpretation" class="advice">No result yet.</div>
+      </div>
+
+      <div>
+        <div class="small">What to DO</div>
+        <div id="dos" class="dos"></div>
+      </div>
+
+      <div>
+        <div class="small">What to AVOID (DON'T)</div>
+        <div id="donts" class="donts"></div>
+      </div>
+
+      <div style="margin-top:auto;display:flex;gap:8px;align-items:center;">
+        <button id="print-btn" class="btn" type="button" style="background:#0b6b3a">Print / Save</button>
+        <div class="small" style="margin-left:auto">Note: This is not a medical diagnosis. For extremes or health concerns, consult a doctor.</div>
+      </div>
+    </section>
+
+    <footer>
+      <div class="small">BMI categories used:
+        <strong>Underweight &lt; 18.5</strong>,
+        <strong>Fit (18.5–24.9)</strong>,
+        <strong>Overweight ≥ 25</strong>
+      </div>
+      <div class="small">Powered by a simple BMI formula</div>
+    </footer>
+  </div>
+
+  <script>
+    // Utility & data
+    const elements = {
+      age: document.getElementById('age'),
+      height: document.getElementById('height'),
+      weight: document.getElementById('weight'),
+      checkBtn: document.getElementById('check-btn'),
+      clearBtn: document.getElementById('clear-btn'),
+      bmiValue: document.getElementById('bmi-value'),
+      bmiNote: document.getElementById('bmi-note'),
+      categoryPill: document.getElementById('category-pill'),
+      interpretation: document.getElementById('interpretation'),
+      dos: document.getElementById('dos'),
+      donts: document.getElementById('donts'),
+      printBtn: document.getElementById('print-btn'),
+    };
+
+    // Recommendations data
+    const advice = {
+      underweight: {
+        title: 'Underweight',
+        note: 'BMI is below 18.5 — you may need to gain weight gradually and safely.',
+        dos: [
+          'Eat more calories than you burn — add healthy calorie-dense foods (nuts, peanut butter, avocado).',
+          'Increase protein intake (eggs, dairy, legumes, lean meat) to support muscle growth.',
+          'Have 5–6 smaller meals or 3 meals + 2 snacks daily.',
+          'Do strength/resistance training 2–4 times a week to build muscle mass.',
+          'Include smoothies or shakes with milk, banana and nut butter if you struggle to eat enough.'
+        ],
+        donts: [
+          'Don’t skip meals — regular meals are important.',
+          'Avoid relying on empty calories (sugary drinks, fried junk) alone — aim for nutritious calories.',
+          'Don’t overdo cardio — excessive cardio burns calories you need.',
+          'If weight loss is sudden or unexplained, see a doctor (could be an underlying issue).'
+        ]
+      },
+      fit: {
+        title: 'Fit (Normal)',
+        note: 'BMI between 18.5 and 24.9 — this is a healthy range for most adults.',
+        dos: [
+          'Maintain a balanced diet with vegetables, fruits, protein, whole grains and healthy fats.',
+          'Keep a regular exercise routine: mix cardio and strength training (150 min moderate activity/week).',
+          'Monitor weight periodically and maintain consistent sleep (7–9 hours).',
+          'Stay hydrated and manage stress through activity or relaxation techniques.'
+        ],
+        donts: [
+          'Avoid sudden extreme diets or long-term calorie deficits.',
+          'Don’t ignore strength training — it helps keep muscle mass as you age.',
+          'Avoid excessive added sugar and high ultra-processed food intake.'
+        ]
+      },
+      overweight: {
+        title: 'Overweight',
+        note: 'BMI 25 or higher — consider safe weight-loss strategies to reduce health risk.',
+        dos: [
+          'Aim for a moderate calorie deficit (reduce daily calories by ~300–500 kcal) for gradual loss.',
+          'Increase daily physical activity — brisk walking, cycling, or structured workouts.',
+          'Prioritize whole foods: vegetables, lean protein, whole grains and legumes.',
+          'Include strength training to preserve muscle while losing fat.',
+          'Set small measurable goals (e.g., 0.5–1 kg per week) and track progress.'
+        ],
+        donts: [
+          'Don’t follow extreme crash diets or severe restriction — they are unsafe and unsustainable.',
+          'Avoid sugary drinks and frequent fast-food meals.',
+          'Don’t rely only on scales — measure waist, energy levels and clothing fit too.',
+          'If BMI ≥ 30 or you have other conditions (diabetes, high blood pressure), consult a healthcare professional.'
+        ]
+      }
+    };
+
+    // Helpers
+    function roundOne(n){ return Math.round(n * 10) / 10; }
+
+    function classifyBMI(bmi){
+      if (bmi < 18.5) return 'underweight';
+      if (bmi < 25) return 'fit';
+      return 'overweight';
+    }
+
+    function applyCategoryStyle(cat){
+      const pill = elements.categoryPill;
+      pill.style.visibility = 'visible';
+      pill.className = 'category';
+      if (cat === 'underweight'){ pill.classList.add('under'); pill.textContent = 'Underweight'; }
+      else if (cat === 'fit'){ pill.classList.add('fit'); pill.textContent = 'Fit'; }
+      else { pill.classList.add('over'); pill.textContent = 'Overweight'; }
+    }
+
+    function showAdvice(cat){
+      const data = advice[cat];
+      elements.interpretation.textContent = data.note;
+      elements.dos.innerHTML = '';
+      elements.donts.innerHTML = '';
+      data.dos.forEach(d => {
+        const el = document.createElement('div'); el.textContent = '• ' + d; elements.dos.appendChild(el);
+      });
+      data.donts.forEach(d => {
+        const el = document.createElement('div'); el.textContent = '• ' + d; elements.donts.appendChild(el);
+      });
+    }
+
+    // Main logic
+    elements.checkBtn.addEventListener('click', ()=>{
+      const age = Number(elements.age.value);
+      const heightCm = Number(elements.height.value);
+      const weightKg = Number(elements.weight.value);
+
+      // Basic validation
+      if (!age || age < 1 || age > 120){
+        alert('Please enter a valid age (1–120).'); elements.age.focus(); return;
+      }
+      if (!heightCm || heightCm < 50 || heightCm > 250){
+        alert('Please enter a valid height in cm (50–250).'); elements.height.focus(); return;
+      }
+      if (!weightKg || weightKg < 10 || weightKg > 500){
+        alert('Please enter a valid weight in kg (10–500).'); elements.weight.focus(); return;
+      }
+
+      // BMI calculation = weight (kg) / (height (m))^2
+      const heightM = heightCm / 100;
+      const bmi = weightKg / (heightM * heightM);
+      const bmiRounded = roundOne(bmi);
+
+      elements.bmiValue.textContent = bmiRounded;
+      elements.bmiNote.textContent = `BMI = weight ÷ (height in meters)² — based on WHO categories.`;
+
+      const category = classifyBMI(bmi);
+      applyCategoryStyle(category);
+      showAdvice(category);
+
+      // Extra friendly message for extremes
+      if (bmi < 16 || bmi >= 35){
+        const warn = document.createElement('div');
+        warn.style.color = 'var(--danger)';
+        warn.style.fontWeight = '700';
+        warn.style.marginTop = '8px';
+        warn.textContent = 'Important: Your BMI is in an extreme range. Please consult a healthcare professional for personalised advice.';
+        // remove old warnings
+        const old = document.querySelector('#result-card .ext-warn');
+        if (old) old.remove();
+        warn.classList.add('ext-warn');
+        document.getElementById('result-card').appendChild(warn);
+      } else {
+        const old = document.querySelector('#result-card .ext-warn'); if (old) old.remove();
+      }
+    });
+
+    elements.clearBtn.addEventListener('click', ()=>{
+      elements.age.value = ''; elements.height.value = ''; elements.weight.value = '';
+      elements.bmiValue.textContent = '—'; elements.categoryPill.style.visibility = 'hidden';
+      elements.interpretation.textContent = 'No result yet.'; elements.dos.innerHTML=''; elements.donts.innerHTML='';
+      const old = document.querySelector('#result-card .ext-warn'); if (old) old.remove();
+    });
+
+    elements.printBtn.addEventListener('click', ()=>{
+      window.print();
+    });
+
+    // Accessibility: Enter to submit when fields focused
+    [elements.age, elements.height, elements.weight].forEach(inp => {
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          elements.checkBtn.click();
+        }
+      });
+    });
+  </script>
+</body>
+</html>
